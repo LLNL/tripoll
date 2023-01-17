@@ -257,7 +257,7 @@ void tc_push_only(
             auto q_upper = find_next_iterator(q_lower, q_end);
 
             // Apply callback on all combinations of matching edges
-            const auto &r_metadata = p_lower->get_target_metadata();
+            const auto &r_metadata = q_lower->get_target_metadata();
             for (auto curr_p = p_lower; curr_p != p_upper; ++curr_p) {
               const auto &p_edge_metadata = curr_p->get_edge_metadata();
               for (auto curr_q = q_lower; curr_q != q_upper; ++curr_q) {
@@ -458,7 +458,7 @@ void tc_push_pull(
             auto q_upper = find_next_iterator(q_lower, q_end);
 
             // Apply callback on all combinations of matching edges
-            const auto &r_metadata = p_lower->get_target_metadata();
+            const auto &r_metadata = q_lower->get_target_metadata();
             for (auto curr_p = p_lower; curr_p != p_upper; ++curr_p) {
               const auto &p_edge_metadata = curr_p->get_edge_metadata();
               for (auto curr_q = q_lower; curr_q != q_upper; ++curr_q) {

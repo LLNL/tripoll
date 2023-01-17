@@ -25,8 +25,9 @@ int main(int argc, char **argv) {
       (world.rank() <
        total_num_edges % world.size()); /// Number of edges each rank generates
   bool undirected = false;
+  bool scramble = true;
   rmat_edge_generator rmat(world.rank(), rmat_scale, local_num_edges, 0.57,
-                           0.19, 0.19, 0.05, true, undirected);
+                           0.19, 0.19, 0.05, scramble, undirected);
 
   // Build undirected version of graph
   world.cout0("Generating undirected RMAT graph scale ", rmat_scale);
