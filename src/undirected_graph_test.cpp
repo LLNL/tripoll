@@ -45,9 +45,9 @@ int main(int argc, char **argv) {
     }
 
     int fav_num = 1;
-    auto degree_lambda = [&fav_num](auto &vertex_data) {
-      std::cout << "Vertex " << vertex_data.first << " has "
-                << vertex_data.second.second.size() << " edges";
+    auto degree_lambda = [&fav_num](const auto &vtx_id, const auto &data) {
+      std::cout << "Vertex " << vtx_id << " has " << data.second.size()
+                << " edges";
       std::cout << "\nAlso, my favorite number is " << fav_num++ << std::endl;
     };
 
@@ -73,9 +73,7 @@ int main(int argc, char **argv) {
           std::cout << std::endl;
         };
 
-    auto print_lambda_ordered_all = [](auto &vtx_data) {
-      auto &vtx_id = vtx_data.first;
-      auto &data = vtx_data.second;
+    auto print_lambda_ordered_all = [](const auto &vtx_id, const auto &data) {
       auto &v_data = data.get_vertex_data();
       auto &order = data.get_vertex_order();
       auto &adj_list = data.get_adjacency_list();

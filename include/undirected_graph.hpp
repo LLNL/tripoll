@@ -63,8 +63,8 @@ public:
   }
 
   void sort_edges() {
-    auto sort_edges_lambda = [](auto &vertex_data) {
-      auto &edges = vertex_data.second.second;
+    auto sort_edges_lambda = [](const auto &vertex_ID, auto &metadata_edges) {
+      auto &edges = metadata_edges.second;
       std::sort(edges.begin(), edges.end());
     };
     for_all_vertices(sort_edges_lambda);
@@ -77,8 +77,9 @@ public:
     };
 
     auto uniquify_edges_lambda =
-        [&ignore_edge_metadata_comparison](auto &vertex_data) {
-          auto &edges = vertex_data.second.second;
+        [&ignore_edge_metadata_comparison](const auto &vertex_ID,
+                                           auto &metadata_edges) {
+          auto &edges = metadata_edges.second;
           edges.erase(std::unique(edges.begin(), edges.end(),
                                   ignore_edge_metadata_comparison),
                       edges.end());
@@ -94,8 +95,9 @@ public:
 
   uint64_t num_edges() {
     uint64_t local_count{0};
-    auto count_local_lambda = [&local_count](auto &vertex_data) {
-      local_count += vertex_data.second.second.size();
+    auto count_local_lambda = [&local_count](const auto &vertex_ID,
+                                             auto &metadata_edges) {
+      local_count += metadata_edges.second.size();
     };
     for_all_vertices(count_local_lambda);
 
@@ -104,8 +106,9 @@ public:
 
   uint64_t max_degree() {
     uint64_t local_max{0};
-    auto local_max_lambda = [&local_max](auto &vertex_data) {
-      local_max = std::max(local_max, vertex_data.second.second.size());
+    auto local_max_lambda = [&local_max](const auto &vertex_ID,
+                                         auto &metadata_edges) {
+      local_max = std::max(local_max, metadata_edges.second.size());
     };
     for_all_vertices(local_max_lambda);
 

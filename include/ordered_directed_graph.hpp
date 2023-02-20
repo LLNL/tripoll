@@ -121,9 +121,10 @@ public:
   }
 
   void sort_directed_edges() {
-    auto sort_edges_lambda = [](auto &vtx_data) {
+    auto sort_edges_lambda = [](const auto &vertex_ID, auto &metadata_edges) {
+      // auto &edges = metadata_edges.second;
       metadata_adjacency_list_type &adj_list =
-          vtx_data.second.get_adjacency_list();
+          metadata_edges.get_adjacency_list();
       std::sort(adj_list.begin(), adj_list.end(),
                 std::greater<edge_info_type>());
     };
@@ -132,8 +133,10 @@ public:
 
   void uniquify_edges() {
     sort_directed_edges();
-    auto uniquify_edges_lambda = [](auto &vtx_data) {
-      auto &adj_list = vtx_data.second.get_adjacency_list();
+    auto uniquify_edges_lambda = [](const auto &vertex_ID,
+                                    auto &metadata_edges) {
+      // auto &edges = metadata_edges.second;
+      auto &adj_list = metadata_edges.get_adjacency_list();
       adj_list.erase(std::unique(adj_list.begin(), adj_list.end()),
                      adj_list.end());
     };
@@ -173,8 +176,9 @@ public:
 
   uint64_t num_edges() {
     uint64_t local_count{0};
-    auto count_local_lambda = [&local_count](auto &vertex_data) {
-      local_count += vertex_data.second.get_adjacency_list().size();
+    auto count_local_lambda = [&local_count](const auto &vertex_ID,
+                                             auto &metadata_edges) {
+      local_count += metadata_edges.get_adjacency_list().size();
     };
     for_all_vertices(count_local_lambda);
 
@@ -183,9 +187,10 @@ public:
 
   uint64_t max_degree() {
     uint64_t local_max{0};
-    auto max_degree_lambda = [&local_max](auto &vertex_data) {
+    auto max_degree_lambda = [&local_max](const auto &vertex_ID,
+                                          auto &metadata_edges) {
       local_max =
-          std::max(local_max, vertex_data.second.get_adjacency_list().size());
+          std::max(local_max, metadata_edges.get_adjacency_list().size());
     };
     for_all_vertices(max_degree_lambda);
 

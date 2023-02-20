@@ -31,8 +31,9 @@ size_t dodgr_wedges(ordered_directed_graph<VertexID, VertexData, EdgeData,
                                            OType, Compare> &dg) {
   size_t local_wedges{0};
 
-  auto local_wedges_lambda = [&local_wedges](auto &vertex_data) {
-    const auto degree = vertex_data.second.get_adjacency_list().size();
+  auto local_wedges_lambda = [&local_wedges](const auto &vertex_ID,
+                                             auto &metadata_edges) {
+    const auto degree = metadata_edges.get_adjacency_list().size();
     local_wedges += degree * (degree - 1) / 2;
   };
   dg.for_all_vertices(local_wedges_lambda);
@@ -53,9 +54,9 @@ void make_dodgr_remove_top_k(
 
   ygm::container::map<VertexID, OType> degree_map(dg.comm());
 
-  auto fill_map_lambda = [&degree_map](auto &vertex_data) {
-    degree_map.async_insert(vertex_data.first,
-                            vertex_data.second.second.size());
+  auto fill_map_lambda = [&degree_map](const auto &vertex_ID,
+                                       auto &metadata_edges) {
+    degree_map.async_insert(vertex_ID, metadata_edges.second.size());
   };
 
   g.for_all_vertices(fill_map_lambda);
@@ -72,26 +73,28 @@ void make_dodgr_remove_top_k(
   std::sort(top_vertex_ids.begin(), top_vertex_ids.end());
 
   // Set order for directed graph as vertex degree
-  auto set_order_lambda = [&dg, &top_vertex_ids](auto &vertex_data) {
+  auto set_order_lambda = [&dg, &top_vertex_ids](const auto &vertex_ID,
+                                                 auto &metadata_edges) {
     // Don't set order if vertex needs removing
     if (std::binary_search(top_vertex_ids.begin(), top_vertex_ids.end(),
-                           vertex_data.first)) {
+                           vertex_ID)) {
       return;
     }
-    OType degree = vertex_data.second.second.size();
-    dg.async_set_vertex_order(vertex_data.first, degree);
+    OType degree = metadata_edges.second.size();
+    dg.async_set_vertex_order(vertex_ID, degree);
   };
 
   g.for_all_vertices(set_order_lambda);
 
   // Copy vertex metadata
-  auto copy_vertex_data_lambda = [&dg, &top_vertex_ids](auto &vertex_data) {
+  auto copy_vertex_data_lambda = [&dg, &top_vertex_ids](const auto &vertex_ID,
+                                                        auto &metadata_edges) {
     if (std::binary_search(top_vertex_ids.begin(), top_vertex_ids.end(),
-                           vertex_data.first)) {
+                           vertex_ID)) {
       return;
     }
-    const VertexData &v_data = vertex_data.second.first;
-    dg.async_set_vertex_metadata(vertex_data.first, v_data);
+    const VertexData &v_data = metadata_edges.first;
+    dg.async_set_vertex_metadata(vertex_ID, v_data);
   };
 
   g.for_all_vertices(copy_vertex_data_lambda);
@@ -99,13 +102,13 @@ void make_dodgr_remove_top_k(
   // Add ordered edges to DODGR
   dg.comm().cout0("Adding directed edges from graph to DODGR");
 
-  auto add_edges_lambda = [&dg, &top_vertex_ids](auto &vertex_data) {
-    const VertexID &vtx1 = vertex_data.first;
+  auto add_edges_lambda = [&dg, &top_vertex_ids](const auto &vtx1,
+                                                 auto &metadata_edges) {
     if (std::binary_search(top_vertex_ids.begin(), top_vertex_ids.end(),
                            vtx1)) {
       return;
     }
-    auto &adj_list = vertex_data.second.second;
+    auto &adj_list = metadata_edges.second;
     for (auto &edge : adj_list) {
       const VertexID &vtx2 = edge.first;
       const EdgeData &e_data = edge.second;
@@ -194,30 +197,28 @@ uint64_t tc_no_meta(ordered_directed_graph<VertexID, VertexData, EdgeData,
     tc += compare_adj_lists_lambda(*short_adj_list, *long_adj_list);
   };
 
-  auto start_triangles_lambda = [&dg,
-                                 &q_triangle_count_lambda](auto &vtx_data) {
-    auto &vtx_id = vtx_data.first;
-    auto &data = vtx_data.second;
-    auto &v_data = data.get_vertex_data();
-    auto &order = data.get_vertex_order();
-    auto &adj_list = data.get_adjacency_list();
+  auto start_triangles_lambda =
+      [&dg, &q_triangle_count_lambda](const auto &vtx_id, auto &data) {
+        auto &v_data = data.get_vertex_data();
+        auto &order = data.get_vertex_order();
+        auto &adj_list = data.get_adjacency_list();
 
-    // Copy of adjacency list for truncating and sending to q
-    typename std::remove_reference<decltype(adj_list)>::type tmp_adj_list(
-        adj_list.begin(), adj_list.end());
+        // Copy of adjacency list for truncating and sending to q
+        typename std::remove_reference<decltype(adj_list)>::type tmp_adj_list(
+            adj_list.begin(), adj_list.end());
 
-    auto edge_iter = adj_list.rbegin();
-    auto edge_end = adj_list.rend();
-    while (edge_iter != edge_end) {
-      tmp_adj_list.pop_back();
-      if (tmp_adj_list.size() == 0)
-        break;
+        auto edge_iter = adj_list.rbegin();
+        auto edge_end = adj_list.rend();
+        while (edge_iter != edge_end) {
+          tmp_adj_list.pop_back();
+          if (tmp_adj_list.size() == 0)
+            break;
 
-      auto &ngbr_id = edge_iter->get_ngbr_ID();
-      dg.async_visit_vertex(ngbr_id, q_triangle_count_lambda, tmp_adj_list);
-      edge_iter++;
-    }
-  };
+          auto &ngbr_id = edge_iter->get_ngbr_ID();
+          dg.async_visit_vertex(ngbr_id, q_triangle_count_lambda, tmp_adj_list);
+          edge_iter++;
+        }
+      };
 
   dg.for_all_vertices(start_triangles_lambda);
 
@@ -295,10 +296,8 @@ void tc_push_only(
 
   // Begins triangle counting by iterating over all vertices, identifying wedges
   // and sending adjacency lists as it goes
-  auto start_triangles_lambda = [&dg,
-                                 &q_triangle_count_lambda](auto &vtx_data) {
-    const auto &vtx_id = vtx_data.first;
-    const auto &data = vtx_data.second;
+  auto start_triangles_lambda = [&dg, &q_triangle_count_lambda](
+                                    const auto &vtx_id, auto &data) {
     const auto &v_data = data.get_vertex_data();
     const auto &order = data.get_vertex_order();
     const auto &adj_list = data.get_adjacency_list();
@@ -367,9 +366,8 @@ void tc_push_pull(
   static std::unordered_map<VertexID, std::vector<int>> pulled_from_ranks;
   pulled_from_ranks.clear();
 
-  auto count_adjacency_list_lengths = [&dg](auto &vtx_data) {
-    const auto &vtx_id = vtx_data.first;
-    const auto &data = vtx_data.second;
+  auto count_adjacency_list_lengths = [&dg](const auto &vtx_id,
+                                            const auto &data) {
     const auto &adj_list = data.get_adjacency_list();
 
     auto ptr = data.get_pointer();
@@ -494,10 +492,8 @@ void tc_push_pull(
                                        vtx_data, pq_metadata_vec);
       };
 
-  auto start_triangles_lambda = [&dg,
-                                 &q_triangle_count_lambda](auto &vtx_data) {
-    const auto &vtx_id = vtx_data.first;
-    const auto &data = vtx_data.second;
+  auto start_triangles_lambda = [&dg, &q_triangle_count_lambda](
+                                    const auto &vtx_id, const auto &data) {
     const auto &v_data = data.get_vertex_data();
     const auto &order = data.get_vertex_order();
     const auto &adj_list = data.get_adjacency_list();

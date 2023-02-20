@@ -89,9 +89,8 @@ int main(int argc, char **argv) {
   world.cout0("Adding degree as vertex metadata");
   step_timer.reset();
 
-  auto degree_lambda = [&g](auto &vertex_data) {
-    auto vtx_id = vertex_data.first;
-    auto degree = vertex_data.second.second.size();
+  auto degree_lambda = [&g](const auto &vtx_id, const auto &data) {
+    auto degree = data.second.size();
     g.async_set_vertex_metadata(vtx_id, degree);
   };
 
