@@ -24,11 +24,10 @@ public:
   ordered_directed_graph(ygm::comm &comm) : m_vertex_map(comm){};
 
   void async_set_vertex_order(const VertexID &vtx, const order_type &order) {
-    auto set_order_lambda =
-        [](std::pair<const VertexID, full_vertex_type> &vtx_data,
-           const order_type &order) {
-          vtx_data.second.set_vertex_order(order);
-        };
+    auto set_order_lambda = [](const VertexID &vtx, full_vertex_type &vtx_data,
+                               const order_type &order) {
+      vtx_data.set_vertex_order(order);
+    };
 
     m_vertex_map.async_visit(vtx, set_order_lambda, order);
   }
@@ -36,48 +35,44 @@ public:
   void async_add_ordered_edge(const VertexID &vtx1, const VertexID &vtx2,
                               const EdgeData &edge_data) {
     auto outer_forward_edge_info_lambda =
-        [](std::pair<const VertexID, full_vertex_type> &vtx_data,
+        [](const VertexID &vtx, full_vertex_type &vtx_data,
            const VertexID &ngbr_vtx, const EdgeData &edge_data, auto map_ptr) {
-          const order_type &my_order = vtx_data.second.get_vertex_order();
-          const VertexData &my_vtx_metadata = vtx_data.second.get_vertex_data();
+          const order_type &my_order = vtx_data.get_vertex_order();
+          const VertexData &my_vtx_metadata = vtx_data.get_vertex_data();
           auto outer_send_order_lambda =
-              [](std::pair<const VertexID, full_vertex_type> &vtx_data,
+              [](const VertexID &vtx, full_vertex_type &vtx_data,
                  const order_type &order, const VertexData &vtx_metadata,
                  const VertexID &ngbr_vtx, const EdgeData &edge_data,
                  auto map_ptr) {
-                const order_type &my_order = vtx_data.second.get_vertex_order();
-                const VertexData &my_vtx_metadata =
-                    vtx_data.second.get_vertex_data();
+                const order_type &my_order = vtx_data.get_vertex_order();
+                const VertexData &my_vtx_metadata = vtx_data.get_vertex_data();
                 // Insert vertex if I have lower order than neighbor
-                if (my_order < order ||
-                    (my_order == order && vtx_data.first < ngbr_vtx)) {
-                  vtx_data.second.adjacency_list_push_back(
+                if (my_order < order || (my_order == order && vtx < ngbr_vtx)) {
+                  vtx_data.adjacency_list_push_back(
                       edge_info_type(ngbr_vtx, order, edge_data, vtx_metadata));
                 } else { // Send message back to insert at original vertex
-                  auto return_lambda =
-                      [](std::pair<const VertexID, full_vertex_type> &vtx_data,
-                         const order_type &order,
-                         const VertexData &vtx_metadata,
-                         const VertexID &ngbr_vtx, const EdgeData &edge_data) {
-                        const order_type &my_order =
-                            vtx_data.second.get_vertex_order();
-                        // if (my_order < order ||
-                        //(my_order == order && vtx_data.first < ngbr_vtx)) {
-                        vtx_data.second.adjacency_list_push_back(edge_info_type(
-                            ngbr_vtx, order, edge_data, vtx_metadata));
-                        //} else {
-                        // std::cout << "Not inserting self-loop" <<
-                        // std::endl;
-                        //}
-                      };
+                  auto return_lambda = [](const VertexID &vtx,
+                                          full_vertex_type &vtx_data,
+                                          const order_type &order,
+                                          const VertexData &vtx_metadata,
+                                          const VertexID &ngbr_vtx,
+                                          const EdgeData &edge_data) {
+                    const order_type &my_order = vtx_data.get_vertex_order();
+                    // if (my_order < order ||
+                    //(my_order == order && vtx_data.first < ngbr_vtx)) {
+                    vtx_data.adjacency_list_push_back(edge_info_type(
+                        ngbr_vtx, order, edge_data, vtx_metadata));
+                    //} else {
+                    // std::cout << "Not inserting self-loop" <<
+                    // std::endl;
+                    //}
+                  };
                   map_ptr->async_visit(ngbr_vtx, return_lambda, my_order,
-                                       my_vtx_metadata, vtx_data.first,
-                                       edge_data);
+                                       my_vtx_metadata, vtx, edge_data);
                 }
               };
           map_ptr->async_visit(ngbr_vtx, outer_send_order_lambda, my_order,
-                               my_vtx_metadata, vtx_data.first, edge_data,
-                               map_ptr);
+                               my_vtx_metadata, vtx, edge_data, map_ptr);
         };
 
     // Don't send self-loops
@@ -89,30 +84,30 @@ public:
 
   void async_set_vertex_metadata(const VertexID &vtx,
                                  const VertexData &vtx_data) {
-    auto set_vertex_metadata_lambda =
-        [](std::pair<const VertexID, full_vertex_type> &vtx_data,
-           const VertexData &vertex_data) {
-          vtx_data.second.set_vertex_data(vertex_data);
-        };
+    auto set_vertex_metadata_lambda = [](const VertexID &vtx,
+                                         full_vertex_type &vtx_data,
+                                         const VertexData &vertex_data) {
+      vtx_data.set_vertex_data(vertex_data);
+    };
     m_vertex_map.async_visit(vtx, set_vertex_metadata_lambda, vtx_data);
   }
 
   template <typename Visitor, typename... VisitorArgs>
   void async_visit_vertex(const VertexID &vtx, Visitor visitor,
                           const VisitorArgs &...args) {
-    auto visit_wrapper_lambda =
-        [](std::pair<const VertexID, full_vertex_type> &vtx_data,
-           const VisitorArgs &...args) {
-          const VertexID &vertex_id = vtx_data.first;
-          auto data = vtx_data.second;
-          const VertexData &vertex_data = data.get_vertex_data();
-          const order_type &vertex_order = data.get_vertex_order();
-          const metadata_adjacency_list_type &adjacency_list =
-              data.get_adjacency_list();
+    auto visit_wrapper_lambda = [](const VertexID &vtx,
+                                   full_vertex_type &vtx_data,
+                                   const VisitorArgs &...args) {
+      const VertexID &vertex_id = vtx;
+      auto data = vtx_data;
+      const VertexData &vertex_data = data.get_vertex_data();
+      const order_type &vertex_order = data.get_vertex_order();
+      const metadata_adjacency_list_type &adjacency_list =
+          data.get_adjacency_list();
 
-          Visitor *v;
-          (*v)(vertex_id, vertex_data, vertex_order, adjacency_list, args...);
-        };
+      Visitor *v;
+      (*v)(vertex_id, vertex_data, vertex_order, adjacency_list, args...);
+    };
     m_vertex_map.async_visit(vtx, visit_wrapper_lambda, args...);
   }
 

@@ -21,11 +21,10 @@ public:
 
   void async_add_edge(const VertexID &vtx1, const VertexID &vtx2,
                       const EdgeData &edge_data) {
-    auto add_edge_lambda =
-        [](std::pair<const VertexID, full_vertex_type> &src_data,
-           const VertexID &dest, const EdgeData &edge_data) {
-          src_data.second.second.push_back(std::make_pair(dest, edge_data));
-        };
+    auto add_edge_lambda = [](const VertexID &vtx, full_vertex_type &src_data,
+                              const VertexID &dest, const EdgeData &edge_data) {
+      src_data.second.push_back(std::make_pair(dest, edge_data));
+    };
 
     m_vertex_map.async_visit(vtx1, add_edge_lambda, vtx2, edge_data);
     m_vertex_map.async_visit(vtx2, add_edge_lambda, vtx1, edge_data);
@@ -34,10 +33,8 @@ public:
   void async_set_vertex_metadata(const VertexID &vtx,
                                  const VertexData &vtx_data) {
     auto set_vertex_metadata_lambda =
-        [](std::pair<const VertexID, full_vertex_type> &src_data,
-           const VertexData &vertex_data) {
-          src_data.second.first = vertex_data;
-        };
+        [](const VertexID &vtx, full_vertex_type &src_data,
+           const VertexData &vertex_data) { src_data.first = vertex_data; };
 
     m_vertex_map.async_visit(vtx, set_vertex_metadata_lambda, vtx_data);
   }
@@ -45,16 +42,16 @@ public:
   template <typename Visitor, typename... VisitorArgs>
   void async_visit_vertex(const VertexID &vtx, Visitor visitor,
                           const VisitorArgs &...args) {
-    auto visit_wrapper_lambda =
-        [](std::pair<const VertexID, full_vertex_type> &src_data,
-           const VisitorArgs &...args) {
-          const VertexID &vertex_id = src_data.first;
-          VertexData &vertex_data = src_data.second.first;
-          metadata_adjacency_list_type &edges = src_data.second.second;
+    auto visit_wrapper_lambda = [](const VertexID &vtx,
+                                   full_vertex_type &src_data,
+                                   const VisitorArgs &...args) {
+      const VertexID &vertex_id = vtx;
+      VertexData &vertex_data = src_data.first;
+      metadata_adjacency_list_type &edges = src_data.second;
 
-          Visitor *v;
-          (*v)(vertex_id, vertex_data, edges, args...);
-        };
+      Visitor *v;
+      (*v)(vertex_id, vertex_data, edges, args...);
+    };
     m_vertex_map.async_visit(vtx, visit_wrapper_lambda, args...);
   }
 
