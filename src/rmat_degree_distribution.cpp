@@ -61,7 +61,7 @@ int main(int argc, char **argv) {
   ygm::timer preprocess_timer{};
 
   // Graph with ints for IDs, vertex metadata, and edge metadata.
-  tc_metadata::undirected_graph<uint64_t, uint32_t, uint64_t> g(world);
+  tripoll::undirected_graph<uint64_t, uint32_t, uint64_t> g(world);
 
   auto edge_gen_iter = rmat.begin();
   auto edge_gen_end = rmat.end();
@@ -113,8 +113,8 @@ int main(int argc, char **argv) {
   world.cout0("Converting graph to DODGR");
   step_timer.reset();
 
-  tc_metadata::ordered_directed_graph<uint64_t, uint32_t, uint64_t, uint32_t>
-      dodgr(world);
+  tripoll::ordered_directed_graph<uint64_t, uint32_t, uint64_t, uint32_t> dodgr(
+      world);
 
   make_dodgr(g, dodgr);
 

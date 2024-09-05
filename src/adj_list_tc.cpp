@@ -31,7 +31,7 @@ int main(int argc, char **argv) {
   ygm::timer step_timer{};
   ygm::timer preprocess_timer{};
 
-  tc_metadata::undirected_graph<uint32_t, bool, bool> g(world);
+  tripoll::undirected_graph<uint32_t, bool, bool> g(world);
 
   auto read_file_lambda = [&g, &world](std::string &fname) {
     std::ifstream ifs(fname.c_str());
@@ -65,8 +65,7 @@ int main(int argc, char **argv) {
   world.cout0("Converting graph to DODGR");
   step_timer.reset();
 
-  tc_metadata::ordered_directed_graph<uint32_t, bool, bool, uint32_t> dodgr(
-      world);
+  tripoll::ordered_directed_graph<uint32_t, bool, bool, uint32_t> dodgr(world);
 
   make_dodgr(g, dodgr);
 

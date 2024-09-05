@@ -12,7 +12,7 @@
 int main(int argc, char **argv) {
   ygm::comm world(&argc, &argv);
   {
-    tc_metadata::undirected_graph<uint64_t, std::string, std::string> g(world);
+    tripoll::undirected_graph<uint64_t, std::string, std::string> g(world);
 
     if (world.rank0()) {
       g.async_set_vertex_metadata(1, "first vertex");
@@ -53,8 +53,8 @@ int main(int argc, char **argv) {
 
     g.for_all_vertices(degree_lambda);
 
-    tc_metadata::ordered_directed_graph<uint64_t, std::string, std::string,
-                                        uint64_t>
+    tripoll::ordered_directed_graph<uint64_t, std::string, std::string,
+                                    uint64_t>
         dg(world);
 
     make_dodgr(g, dg);

@@ -9,7 +9,7 @@
 #include <vector>
 #include <ygm/container/map.hpp>
 
-namespace tc_metadata {
+namespace tripoll {
 template <typename VertexID, typename VertexData, typename EdgeData>
 class undirected_graph {
 public:
@@ -115,4 +115,4 @@ public:
 private:
   ygm::container::map<VertexID, full_vertex_type> m_vertex_map;
 };
-} // namespace tc_metadata
+} // namespace tripoll

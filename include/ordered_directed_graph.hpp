@@ -9,7 +9,7 @@
 #include <vector>
 #include <ygm/container/map.hpp>
 
-namespace tc_metadata {
+namespace tripoll {
 // This version stores all vertex metadata of target's along edges
 template <typename VertexID, typename VertexData, typename EdgeData,
           typename OType, class Compare = std::less<OType>>
@@ -327,4 +327,4 @@ public:
 private:
   ygm::container::map<VertexID, full_vertex_type> m_vertex_map;
 };
-} // namespace tc_metadata
+} // namespace tripoll

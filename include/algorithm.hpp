@@ -10,7 +10,7 @@
 #include <undirected_graph.hpp>
 #include <ygm/utility.hpp>
 
-namespace tc_metadata {
+namespace tripoll {
 
 // Helper function for progressing through adjacency lists with multi-edges
 template <typename ITER>
@@ -628,4 +628,4 @@ void tc_push_pull(
   dg.comm().cout0("Sent a total of ", dg.comm().all_reduce_sum(num_edges_sent),
                   " edges");
 }
-} // namespace tc_metadata
+} // namespace tripoll
