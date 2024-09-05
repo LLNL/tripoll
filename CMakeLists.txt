@@ -101,4 +101,6 @@ if (NOT CMAKE_BUILD_TYPE)
 	message(STATUS "CMAKE_BUILD_TYPE is set as Release")
 endif ()
 
-add_subdirectory(src)
+if (TRIPOLL_MAIN_PROJECT)
+  add_subdirectory(src)
+endif()
